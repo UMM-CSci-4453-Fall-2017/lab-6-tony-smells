@@ -14,35 +14,58 @@ connection.connect(function(err){
 });
 
 connection.query('SHOW DATABASES', function(err, rows, fields){
+	var dbCounter = 0;
 	if(err){
 		console.log('Error looking up databases');
 		return;
 	}
 
-	console.log('SHOW TABLES FROM ' + rows[0].Database);
+	for(b = 0; b < rows.length; b++){
+		dbCounter++;
+		findDatabase(rows[b].Database, dbCounter == rows.length);
+	}
 
-	connection.query('SHOW TABLES FROM ' + rows[0].Database, function(errDB, rowsDB, fieldsDB){
+
+
+});
+
+function findTableFields(database, tableName, dbCounter, tableCounter){
+	connection.query('DESCRIBE ' + database + '.' + tableName, function(errTable, rowTable, fieldsTable){
+				if(errTable){
+					console.log("This is the error " + errTable);
+					return;
+				}
+
+
+
+				console.log("---|"+database + "\n" + "......|" + database + "." + tableName + ">");
+				for(j = 0; j < rowTable.length;  j++){
+					console.log("\tFieldName: `"+ rowTable[j].Field + "` \t" + "(" + rowTable[j].Type + ")");
+				}
+				if (dbCounter && tableCounter) {
+					connection.end();
+				}
+	});
+}
+
+function findTables(database,tableList,dbCounter){
+	var tableCounter = 0;
+	for(i = 0; i < tableList.length; i++){
+		tableCounter++;
+		var query = "Tables_in_" + database;
+		var table1 = tableList[i][query];
+
+		findTableFields(database, table1, dbCounter, tableCounter == tableList.length);
+	}
+}
+
+function findDatabase(name, dbCounter){
+	connection.query('SHOW TABLES FROM ' + name, function(errDB, rowsDB, fieldsDB){
 		if(errDB){
 			console.log("this is the error: " + errDB);
 			return;
 		}
 
-		for(i = 0; i < rowsDB.length; i++){
-			var query = "Tables_in_" + rows[0].Database;
-			var tableName = rowsDB[i][query];
-			console.log(tableName + ": ")
-			connection.query('DESCRIBE ' + rows[0].Database+ "." + tableName, function(errTable, rowsTable, fieldsTable){
-				if(errTable){
-					console.log("ayyy lmao");
-					return;
-				}
-
-				console.log(JSON.stringify(rowsTable) + "\n");
-
-			});
-		}
-		connection.end();
+		findTables(name, rowsDB, dbCounter);
 	});
-});
-
-console.log("this is dumb");
+}
